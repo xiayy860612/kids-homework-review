@@ -1,10 +1,10 @@
-name: Deploy Backend
+name: Deploy Frontend
 
 on:
   workflow_dispatch:
     inputs:
       artifact_name:
-        description: 'Backend artifact name (e.g., backend-package-<sha>)'
+        description: 'Frontend artifact name (e.g., frontend-package-<sha>)'
         required: true
         type: string
       environment:
@@ -17,7 +17,7 @@ on:
         default: staging
 
 jobs:
-  deploy-backend:
+  deploy-frontend:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
 
@@ -25,17 +25,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download backend artifact
+      - name: Download frontend artifact
         uses: dawidd6/action-download-artifact@v3
         with:
           name: ${{ inputs.artifact_name }}
-          workflow: pack-backend.yml
+          workflow: pack-frontend.yml
           path: ./artifacts
 
       - name: Verify checksum
         run: |
           cd artifacts
-          sha256sum -c backend-package.sha256
+          sha256sum -c frontend-package.sha256
 
       - name: Configure SSH
         run: |
@@ -48,15 +48,15 @@ jobs:
         run: |
           scp -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=no \
-            artifacts/backend-package.tar.gz \
-            artifacts/backend-package.sha256 \
+            artifacts/frontend-package.tar.gz \
+            artifacts/frontend-package.sha256 \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/tmp/
 
       - name: Upload deploy script to remote server
         run: |
           scp -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=no \
-            backend/be-deploy.sh \
+            frontend/fe-deploy.sh \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/tmp/
 
       - name: Deploy on remote server
@@ -64,14 +64,14 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=no \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} \
-            "bash /tmp/be-deploy.sh /tmp/backend-package.tar.gz /tmp/backend-package.sha256"
+            "bash /tmp/fe-deploy.sh /tmp/frontend-package.tar.gz /tmp/frontend-package.sha256"
 
       - name: Verify deployment
         run: |
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=no \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} \
-            "docker ps -f name=kids-backend"
+            "docker ps -f name=kids-frontend"
 
       - name: Health check
         run: |
@@ -79,7 +79,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=no \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} \
-            "curl -f http://localhost:8080/health || exit 1"
+            "curl -f http://localhost:3000 || exit 1"
 
       - name: Cleanup SSH key
         if: always()

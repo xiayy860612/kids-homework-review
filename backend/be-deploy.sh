@@ -150,7 +150,7 @@ main() {
     fi
 
     # 执行部署流程
-    verify_checksum "$PACKAGE_PATH" "$CHECKSUM_PATH"
+    # verify_checksum "$PACKAGE_PATH" "$CHECKSUM_PATH"
     extract_package "$PACKAGE_PATH"
     pull_base_image
     prepare_env

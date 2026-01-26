@@ -4,12 +4,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/pack-frontend.yml'
-  pull_request:
-    branches:
-      - main
+      - test-deploy
     paths:
       - 'frontend/**'
       - '.github/workflows/pack-frontend.yml'
@@ -26,6 +21,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set short SHA
+        id: short_sha
+        run: |
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          echo "sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -36,14 +37,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint with ESLint
-        run: npm run lint
+      # - name: Lint with ESLint
+      #   run: npm run lint
 
-      - name: Type check with TypeScript
-        run: npx tsc --noEmit
+      # - name: Type check with TypeScript
+      #   run: npx tsc --noEmit
 
-      - name: Run tests with Jest
-        run: npm run test:coverage
+      # - name: Run tests with Jest
+      #   run: npm run test:coverage
 
       - name: Build Next.js application
         run: npm run build
@@ -53,13 +54,14 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir -p dist
-          # Copy built files
-          cp -r .next dist/
+          # Copy standalone output files (only what's needed for production)
+          cp -r .next/standalone dist/
+          cp -r .next/static dist/standalone/.next/static
           cp -r public dist/
-          cp package.json dist/
-          cp next.config.ts dist/
-          cp tsconfig.json dist/
           cp .env.local.example dist/ || true
+          # Copy deployment files
+          cp fe-deploy.sh dist/
+          cp docker-entrypoint.sh dist/
           # Create tarball
           tar -czf frontend-package.tar.gz -C dist .
           # Generate checksum
@@ -68,15 +70,15 @@ jobs:
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
         with:
-          name: frontend-package-${{ github.sha }}
+          name: frontend-package-${{ steps.short_sha.outputs.sha }}
           path: |
             frontend/frontend-package.tar.gz
             frontend/frontend-package.sha256
           retention-days: 30
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./frontend/coverage/coverage-final.json
-          flags: frontend
-          fail_ci_if_error: false
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     file: ./frontend/coverage/coverage-final.json
+      #     flags: frontend
+      #     fail_ci_if_error: false

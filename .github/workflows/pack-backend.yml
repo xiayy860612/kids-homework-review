@@ -80,7 +80,7 @@ jobs:
           cp .env.example dist/ || true
           cp README.md dist/ || true
           # Copy deployment scripts
-          cp deploy.sh dist/
+          cp be-deploy.sh dist/
           cp docker-entrypoint.sh dist/
           # Create tarball
           tar -czf backend-package.tar.gz -C dist .
