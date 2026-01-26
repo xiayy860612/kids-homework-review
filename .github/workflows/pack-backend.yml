@@ -1,0 +1,104 @@
+name: Package Backend
+
+on:
+  push:
+    branches:
+      - main
+      - test-deploy
+    paths:
+      - 'backend/**'
+      - '.github/workflows/pack-backend.yml'
+  workflow_dispatch:
+
+jobs:
+  package-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set short SHA
+        id: short_sha
+        run: |
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          echo "sha=$SHORT_SHA" >> $GITHUB_OUTPUT
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            backend/.venv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install dependencies
+        run: |
+          uv pip install --system -e '.[test]'
+
+      # - name: Lint with ruff
+      #   run: |
+      #     uv pip install --system ruff
+      #     ruff check .
+
+      # - name: Type check with mypy
+      #   run: |
+      #     uv pip install --system mypy
+      #     mypy .
+
+      # - name: Run tests with pytest
+      #   run: |
+      #     uv pip install --system pytest pytest-cov pytest-asyncio httpx
+      #     pytest --cov --cov-report=xml --cov-report=term
+
+      - name: Create deployment package
+        run: |
+          mkdir -p dist
+          # Copy source files
+          cp -r src dist/
+          cp -r alembic dist/
+          cp -r tests dist/ || true
+          cp alembic.ini dist/
+          cp run.py dist/
+          cp pyproject.toml dist/
+          cp uv.lock dist/
+          cp .env.example dist/ || true
+          cp README.md dist/ || true
+          # Copy deployment scripts
+          cp be-deploy.sh dist/
+          cp docker-entrypoint.sh dist/
+          # Create tarball
+          tar -czf backend-package.tar.gz -C dist .
+          # Generate checksum
+          sha256sum backend-package.tar.gz > backend-package.sha256
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-package-${{ steps.short_sha.outputs.sha }}
+          path: |
+            backend/backend-package.tar.gz
+            backend/backend-package.sha256
+          retention-days: 30
+
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     file: ./backend/coverage.xml
+      #     flags: backend
+      #     fail_ci_if_error: false

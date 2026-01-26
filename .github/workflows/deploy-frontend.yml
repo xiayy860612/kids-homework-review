@@ -1,0 +1,87 @@
+name: Deploy Frontend
+
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_name:
+        description: 'Frontend artifact name (e.g., frontend-package-<sha>)'
+        required: true
+        type: string
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download frontend artifact
+        uses: dawidd6/action-download-artifact@v3
+        with:
+          name: ${{ inputs.artifact_name }}
+          workflow: pack-frontend.yml
+          path: ./artifacts
+
+      - name: Verify checksum
+        run: |
+          cd artifacts
+          sha256sum -c frontend-package.sha256
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Upload package to remote server
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            artifacts/frontend-package.tar.gz \
+            artifacts/frontend-package.sha256 \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/tmp/
+
+      - name: Upload deploy script to remote server
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            frontend/fe-deploy.sh \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/tmp/
+
+      - name: Deploy on remote server
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} \
+            "bash /tmp/fe-deploy.sh /tmp/frontend-package.tar.gz /tmp/frontend-package.sha256"
+
+      - name: Verify deployment
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} \
+            "docker ps -f name=kids-frontend"
+
+      - name: Health check
+        run: |
+          sleep 10
+          ssh -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} \
+            "curl -f http://localhost:3000 || exit 1"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
