@@ -1,0 +1,82 @@
+name: Package Frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/pack-frontend.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/pack-frontend.yml'
+  workflow_dispatch:
+
+jobs:
+  package-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint with ESLint
+        run: npm run lint
+
+      - name: Type check with TypeScript
+        run: npx tsc --noEmit
+
+      - name: Run tests with Jest
+        run: npm run test:coverage
+
+      - name: Build Next.js application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Create deployment package
+        run: |
+          mkdir -p dist
+          # Copy built files
+          cp -r .next dist/
+          cp -r public dist/
+          cp package.json dist/
+          cp next.config.ts dist/
+          cp tsconfig.json dist/
+          cp .env.local.example dist/ || true
+          # Create tarball
+          tar -czf frontend-package.tar.gz -C dist .
+          # Generate checksum
+          sha256sum frontend-package.tar.gz > frontend-package.sha256
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-package-${{ github.sha }}
+          path: |
+            frontend/frontend-package.tar.gz
+            frontend/frontend-package.sha256
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./frontend/coverage/coverage-final.json
+          flags: frontend
+          fail_ci_if_error: false
