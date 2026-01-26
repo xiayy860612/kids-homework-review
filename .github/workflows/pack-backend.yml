@@ -8,13 +8,6 @@ on:
     paths:
       - 'backend/**'
       - '.github/workflows/pack-backend.yml'
-  pull_request:
-    branches:
-      - main
-      - test-deploy
-    paths:
-      - 'backend/**'
-      - '.github/workflows/pack-backend.yml'
   workflow_dispatch:
 
 jobs:
@@ -27,6 +20,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set short SHA
+        id: short_sha
+        run: |
+          SHORT_SHA=$(git rev-parse --short=7 HEAD)
+          echo "sha=$SHORT_SHA" >> $GITHUB_OUTPUT
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -80,6 +79,9 @@ jobs:
           cp uv.lock dist/
           cp .env.example dist/ || true
           cp README.md dist/ || true
+          # Copy deployment scripts
+          cp deploy.sh dist/
+          cp docker-entrypoint.sh dist/
           # Create tarball
           tar -czf backend-package.tar.gz -C dist .
           # Generate checksum
@@ -88,7 +90,7 @@ jobs:
       - name: Upload backend artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backend-package-${{ github.sha }}
+          name: backend-package-${{ steps.short_sha.outputs.sha }}
           path: |
             backend/backend-package.tar.gz
             backend/backend-package.sha256
