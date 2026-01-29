@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Shield } from "lucide-react";
 
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { AdminRoute } from "@/components/AdminRoute";
 import { Header } from "@/components/Header";
 import { AdminSidebar, type AdminNavItem } from "@/components/AdminSidebar";
 import { UserManagement } from "@/components/admin/UserManagement";
@@ -30,7 +30,7 @@ export default function AdminPage() {
   };
 
   return (
-    <ProtectedRoute>
+    <AdminRoute>
       <div className="min-h-screen bg-background">
         <Header />
         <div className="flex">
@@ -46,6 +46,6 @@ export default function AdminPage() {
           </main>
         </div>
       </div>
-    </ProtectedRoute>
+    </AdminRoute>
   );
 }

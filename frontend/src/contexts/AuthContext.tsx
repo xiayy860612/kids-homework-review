@@ -7,11 +7,13 @@ import { api, setAuthToken, removeAuthToken, getApiError } from "@/lib/api";
 interface JwtPayload {
   sub: string;
   username: string;
+  role: string;
 }
 
 interface User {
   id: string;
   username: string;
+  role: string;
 }
 
 interface AuthContextType {
@@ -32,6 +34,7 @@ function parseJwt(token: string): User | null {
     return {
       id: payload.sub,
       username: payload.username,
+      role: payload.role,
     };
   } catch {
     return null;

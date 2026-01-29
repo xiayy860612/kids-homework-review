@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.auth import router as auth_router
+from src.api.users import router as users_router
 from src.api.wrong_questions import (
     router as wrong_questions_router,
     subjects_router,
@@ -72,6 +73,7 @@ async def health_check() -> dict[str, str]:
 
 # Include routers
 app.include_router(auth_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
 app.include_router(wrong_questions_router, prefix="/api")
 app.include_router(subjects_router, prefix="/api")
 app.include_router(tags_router, prefix="/api")

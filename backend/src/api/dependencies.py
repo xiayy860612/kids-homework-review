@@ -51,7 +51,7 @@ async def get_current_user(
         )
 
     auth_service = AuthService()
-    user = await auth_service.get_user_by_username(db, payload.get("username"))
+    user = await auth_service.get_user_by_id(db, user_id)
 
     if user is None:
         raise HTTPException(
@@ -63,3 +63,26 @@ async def get_current_user(
 
 
 CurrentUserDep = Annotated[User, Depends(get_current_user)]
+
+
+async def get_current_admin_user(current_user: CurrentUserDep) -> User:
+    """Verify the current user has admin role.
+
+    Args:
+        current_user: Current authenticated user
+
+    Returns:
+        User: Current admin user
+
+    Raises:
+        HTTPException: If user is not an admin
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
+
+
+CurrentUserAdminDep = Annotated[User, Depends(get_current_admin_user)]

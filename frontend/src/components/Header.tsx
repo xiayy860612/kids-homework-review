@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, LogOut, Shield } from "lucide-react";
+import { User, LogOut, Shield, KeyRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,10 +12,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ChangePasswordDialog } from "@/components/ChangePasswordDialog";
 
 export function Header() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
 
   return (
     <header className="border-b bg-background">
@@ -38,12 +41,21 @@ export function Header() {
               <span>{user?.username}</span>
             </div>
             <DropdownMenuSeparator />
+            {user?.role === "admin" && (
+              <DropdownMenuItem
+                onClick={() => router.push("/admin")}
+                className="cursor-pointer"
+              >
+                <Shield className="size-4" />
+                <span>Admin</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
-              onClick={() => router.push("/admin")}
+              onClick={() => setPasswordDialogOpen(true)}
               className="cursor-pointer"
             >
-              <Shield className="size-4" />
-              <span>Admin</span>
+              <KeyRound className="size-4" />
+              <span>Change Password</span>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={logout} className="cursor-pointer">
               <LogOut className="size-4" />
@@ -52,6 +64,10 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <ChangePasswordDialog
+        open={passwordDialogOpen}
+        onOpenChange={setPasswordDialogOpen}
+      />
     </header>
   );
 }
