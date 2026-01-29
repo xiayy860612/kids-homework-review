@@ -17,6 +17,13 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=8)
 
 
+class ChangePasswordRequest(BaseModel):
+    """Change password request schema."""
+
+    current_password: str = Field(..., min_length=8)
+    new_password: str = Field(..., min_length=8)
+
+
 class LoginResponse(BaseModel):
     """Login response schema."""
 
@@ -64,7 +71,7 @@ async def login(
         )
 
     access_token = create_access_token(
-        data={"sub": str(user.id), "username": user.username, "role": user.role}
+        data={"sub": str(user.id), "username": user.display_name, "role": user.role}
     )
 
     return LoginResponse(access_token=access_token)
@@ -108,3 +115,33 @@ async def logout(
     response.delete_cookie(key="access_token")
 
     return JSONResponse(content={"message": "Successfully logged out"})
+
+
+@router.put("/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    current_user: CurrentUserDep,
+    db: DatabaseDep,
+) -> JSONResponse:
+    """Change current user's password.
+
+    Args:
+        request: Change password request with current and new password
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        JSONResponse: Success message
+
+    Raises:
+        HTTPException: If current password is incorrect
+    """
+    result = await auth_service.change_password(
+        db, current_user.id, request.current_password, request.new_password
+    )
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect",
+        )
+    return JSONResponse(content={"message": "Password changed successfully"})

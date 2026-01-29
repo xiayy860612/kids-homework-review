@@ -77,6 +77,9 @@ export const api = {
 
   getCurrentUserInfo: () => apiClient.get(`/auth/me`),
 
+  changePassword: (data: { current_password: string; new_password: string }) =>
+    apiClient.put("/auth/change-password", data),
+
   // 错题相关
   // 获取错题列表
   getWrongQuestions: () => apiClient.get("/wrong-questions"),

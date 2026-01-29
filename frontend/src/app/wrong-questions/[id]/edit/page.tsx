@@ -1,15 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
-import useSWR, { mutate } from "swr"
+import useSWR from "swr"
 
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Header } from "@/components/Header"
 import { WrongQuestionForm } from "@/components/WrongQuestionForm"
 import { api } from "@/lib/api"
-import { useToast } from "@/components/ui/use-toast"
 
 interface Subject {
   id: number
@@ -35,8 +34,6 @@ interface WrongQuestion {
 
 export default function EditWrongQuestionPage() {
   const params = useParams()
-  const router = useRouter()
-  const { toast } = useToast()
 
   const id = parseInt(params.id as string)
 

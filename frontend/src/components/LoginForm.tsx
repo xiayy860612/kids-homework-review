@@ -23,7 +23,7 @@ export function LoginForm() {
 
     try {
       await login(username, password);
-      router.push("/dashboard");
+      router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

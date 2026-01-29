@@ -8,7 +8,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Header } from "@/components/Header"
 import { WrongQuestionForm } from "@/components/WrongQuestionForm"
 import { api } from "@/lib/api"
-import { useToast } from "@/components/ui/use-toast"
 
 interface Subject {
   id: number
@@ -23,7 +22,6 @@ interface Tag {
 }
 
 export default function NewWrongQuestionPage() {
-  const { toast } = useToast()
 
   const { data: subjects, isLoading: subjectsLoading } = useSWR<Subject[]>(
     "/subjects",
