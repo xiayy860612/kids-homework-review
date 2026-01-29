@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - test-deploy
     paths:
       - 'frontend/**'
       - '.github/workflows/pack-frontend.yml'
