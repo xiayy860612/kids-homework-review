@@ -1,6 +1,6 @@
 "use client";
 
-import { User, LogOut, ChevronDown } from "lucide-react";
+import { User, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +33,13 @@ export function Header() {
               <span>{user?.username}</span>
             </div>
             <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => window.location.href = "/dashboard/admin"}
+              className="cursor-pointer"
+            >
+              <Shield className="size-4" />
+              <span>Admin</span>
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={logout} className="cursor-pointer">
               <LogOut className="size-4" />
               <span>Logout</span>
