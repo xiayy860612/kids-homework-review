@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { User, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,15 @@ import {
 
 export function Header() {
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   return (
     <header className="border-b bg-background">
       <div className="flex h-16 items-center justify-between px-6">
-        <div className="flex items-center gap-2">
+        <div
+          className="flex cursor-pointer items-center gap-2 hover:opacity-80"
+          onClick={() => router.push("/")}
+        >
           <h1 className="text-xl font-semibold">Kids Homework Review</h1>
         </div>
         <DropdownMenu>
@@ -34,7 +39,7 @@ export function Header() {
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => window.location.href = "/dashboard/admin"}
+              onClick={() => router.push("/admin")}
               className="cursor-pointer"
             >
               <Shield className="size-4" />

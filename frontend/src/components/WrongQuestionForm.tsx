@@ -123,7 +123,7 @@ export function WrongQuestionForm({
       // Invalidate cache
       mutate("/wrong-questions")
 
-      router.push("/dashboard/wrong-questions")
+      router.push("/wrong-questions")
     } catch (error) {
       console.error("Failed to save wrong question:", error)
       toast({
@@ -169,7 +169,7 @@ export function WrongQuestionForm({
           学科 <span className="text-destructive">*</span>
         </Label>
         <Select
-          value={subjectId?.toString()}
+          value={subjectId?.toString() || ""}
           onValueChange={(value) => setSubjectId(parseInt(value))}
           disabled={isDisabled}
         >

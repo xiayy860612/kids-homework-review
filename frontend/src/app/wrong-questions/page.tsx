@@ -18,7 +18,6 @@ import {
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { api } from "@/lib/api"
-import { useToast } from "@/components/ui/use-toast"
 
 interface Subject {
   id: number
@@ -41,7 +40,6 @@ interface WrongQuestion {
 
 export default function WrongQuestionsPage() {
   const router = useRouter()
-  const { toast } = useToast()
 
   const { data: wrongQuestions, isLoading, error } = useSWR<WrongQuestion[]>(
     "/wrong-questions",
@@ -71,7 +69,7 @@ export default function WrongQuestionsPage() {
           <div className="mx-auto max-w-6xl">
             <div className="mb-6 flex items-center justify-between">
               <h1 className="text-2xl font-semibold">错题本</h1>
-              <Button onClick={() => router.push("/dashboard/wrong-questions/new")}>
+              <Button onClick={() => router.push("/wrong-questions/new")}>
                 <Plus className="mr-2 h-4 w-4" />
                 新增错题
               </Button>
@@ -95,7 +93,7 @@ export default function WrongQuestionsPage() {
                   </p>
                   <Button
                     variant="outline"
-                    onClick={() => router.push("/dashboard/wrong-questions/new")}
+                    onClick={() => router.push("/wrong-questions/new")}
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     添加错题
@@ -132,7 +130,7 @@ export default function WrongQuestionsPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() =>
-                              router.push(`/dashboard/wrong-questions/${wq.id}/edit`)
+                              router.push(`/wrong-questions/${wq.id}/edit`)
                             }
                           >
                             <Edit className="h-4 w-4" />
