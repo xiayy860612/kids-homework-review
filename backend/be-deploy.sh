@@ -68,12 +68,25 @@ prepare_env() {
     log_info "准备环境配置..."
     cd "$DEPLOY_DIR"
 
-    # 创建 .env 文件（如果不存在）
-    if [[ ! -f .env ]]; then
-        if [[ -f .env.example ]]; then
-            cp .env.example .env
-            log_warn ".env 文件不存在，已从 .env.example 创建，请编辑配置"
-        fi
+    # 每次部署都从 .env.example 创建 .env 文件
+    if [[ -f .env.example ]]; then
+        cp .env.example .env
+        log_info "已从 .env.example 创建 .env 文件"
+    fi
+
+    # 如果存在 .env.extra 文件，合并到 .env 中
+    if [[ -f /tmp/.env.extra ]]; then
+        log_info "合并 AI secrets 到 .env 文件..."
+
+        # 更新 AI 相关变量
+        source /tmp/.env.extra
+        sed -i.bak "s|^AI_API_BASE=.*|AI_API_BASE=${AI_API_BASE}|" .env
+        sed -i.bak "s|^AI_API_KEY=.*|AI_API_KEY=${AI_API_KEY}|" .env
+        sed -i.bak "s|^AI_MODEL=.*|AI_MODEL=${AI_MODEL}|" .env
+
+        # 清理临时文件
+        # rm -f /tmp/.env.extra .env.bak
+        log_info "extra env 已合并到 .env 文件"
     fi
 
     # 创建数据目录
