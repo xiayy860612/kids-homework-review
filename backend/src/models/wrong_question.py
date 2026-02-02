@@ -34,6 +34,12 @@ class WrongQuestion(Base):
         Integer, ForeignKey("subjects.id"), nullable=False
     )
     image_base64: Mapped[str] = mapped_column(Text, nullable=False)
+    analysis_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending"
+    )
+    analysis_result: Mapped[str | None] = mapped_column(Text, nullable=True)
+    analysis_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    analyzed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=lambda: datetime.now(UTC)
     )

@@ -2,13 +2,15 @@
 
 import * as React from "react"
 import { useParams } from "next/navigation"
-import { Loader2 } from "lucide-react"
-import useSWR from "swr"
+import { Loader2, Sparkles } from "lucide-react"
+import useSWR, { useSWRConfig } from "swr"
 
 import { ProtectedRoute } from "@/components/ProtectedRoute"
 import { Header } from "@/components/Header"
 import { WrongQuestionForm } from "@/components/WrongQuestionForm"
-import { api } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/use-toast"
+import { api, type WrongQuestion } from "@/lib/api"
 
 interface Subject {
   id: number
@@ -22,46 +24,78 @@ interface Tag {
   is_preset: boolean
 }
 
-interface WrongQuestion {
-  id: number
-  title: string
-  subject: Subject
-  tags: Tag[]
-  image_base64: string
-  created_at: string
-  updated_at: string
-}
-
 export default function ViewWrongQuestionPage() {
   const params = useParams()
+  const { mutate } = useSWRConfig()
+  const { toast } = useToast()
 
   const id = parseInt(params.id as string)
+  const [isAnalyzing, setIsAnalyzing] = React.useState(false)
+
+  const fetcher = React.useCallback(
+    async (key: string) => {
+      if (key.startsWith("/wrong-questions/")) {
+        const response = await api.getWrongQuestion(id)
+        return response.data
+      }
+      if (key === "/subjects") {
+        const response = await api.getSubjects()
+        return response.data
+      }
+      if (key === "/tags") {
+        const response = await api.getTags()
+        return response.data
+      }
+      return null
+    },
+    [id]
+  )
 
   const { data: wrongQuestion, isLoading: wrongQuestionLoading } = useSWR<WrongQuestion>(
     `/wrong-questions/${id}`,
-    async () => {
-      const response = await api.getWrongQuestion(id)
-      return response.data
+    fetcher,
+    {
+      refreshInterval: (data) => {
+        // Poll every 3 seconds when analysis is processing
+        return data?.analysis_status === "processing" ? 3000 : 0
+      },
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
     }
   )
 
   const { data: subjects, isLoading: subjectsLoading } = useSWR<Subject[]>(
     "/subjects",
-    async () => {
-      const response = await api.getSubjects()
-      return response.data
-    }
+    fetcher
   )
 
   const { data: tags, isLoading: tagsLoading } = useSWR<Tag[]>(
     "/tags",
-    async () => {
-      const response = await api.getTags()
-      return response.data
-    }
+    fetcher
   )
 
   const isLoading = wrongQuestionLoading || subjectsLoading || tagsLoading
+
+  const handleAnalyze = async () => {
+    setIsAnalyzing(true)
+    try {
+      await api.analyzeWrongQuestion(id)
+      mutate(`/wrong-questions/${id}`)
+      toast({
+        title: "开始解析",
+        description: "AI 正在分析错题，请稍候...",
+      })
+    } catch (error) {
+      console.error("Failed to analyze:", error)
+      toast({
+        title: "解析失败",
+        description: "启动 AI 解析失败，请重试",
+        variant: "destructive",
+      })
+    } finally {
+      setIsAnalyzing(false)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -90,6 +124,8 @@ export default function ViewWrongQuestionPage() {
   }
 
   const tagIds = wrongQuestion.tags.map((t) => t.id)
+  const isCompleted = wrongQuestion.analysis_status === "completed"
+  const isProcessing = wrongQuestion.analysis_status === "processing"
 
   return (
     <ProtectedRoute>
@@ -97,7 +133,24 @@ export default function ViewWrongQuestionPage() {
         <Header />
         <main className="p-6">
           <div className="mx-auto max-w-2xl">
-            <h1 className="mb-6 text-2xl font-semibold">查看错题</h1>
+            <div className="mb-6 flex items-center justify-between">
+              <h1 className="text-2xl font-semibold">查看错题</h1>
+              <Button
+                onClick={handleAnalyze}
+                disabled={isAnalyzing || isProcessing}
+                size="sm"
+                variant={isCompleted ? "outline" : "default"}
+              >
+                {isAnalyzing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : isCompleted ? (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {isCompleted ? "重新解析" : "AI 解析"}
+              </Button>
+            </div>
             <div className="rounded-lg border bg-card p-6">
               <WrongQuestionForm
                 initialData={{
@@ -106,6 +159,9 @@ export default function ViewWrongQuestionPage() {
                   subject_id: wrongQuestion.subject.id,
                   tag_ids: tagIds,
                   image_base64: wrongQuestion.image_base64,
+                  analysis_status: wrongQuestion.analysis_status,
+                  analysis_result: wrongQuestion.analysis_result,
+                  analysis_error: wrongQuestion.analysis_error,
                 }}
                 subjects={subjects}
                 tags={tags}

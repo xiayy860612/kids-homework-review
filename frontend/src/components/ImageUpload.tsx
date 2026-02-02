@@ -16,6 +16,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { ImageLightbox } from "@/components/ImageLightbox"
 
 interface ImageUploadProps {
   value?: string
@@ -192,11 +193,21 @@ export function ImageUpload({
 
       {preview ? (
         <div className="relative group">
-          <img
-            src={preview}
-            alt="预览"
-            className="w-full h-64 object-cover rounded-md border border-input"
-          />
+          {disabled ? (
+            <ImageLightbox src={preview} alt="预览">
+              <img
+                src={preview}
+                alt="预览"
+                className="w-full max-h-96 object-contain rounded-md border border-input"
+              />
+            </ImageLightbox>
+          ) : (
+            <img
+              src={preview}
+              alt="预览"
+              className="w-full max-h-96 object-contain rounded-md border border-input"
+            />
+          )}
           {!disabled && (
             <Button
               type="button"

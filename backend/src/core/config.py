@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
     COOKIE_SECURE: bool = False  # Set to True in production with HTTPS
 
+    # AI Analysis Configuration
+    AI_API_BASE: str = "https://open.bigmodel.cn/api/paas/v4"
+    AI_API_KEY: str = ""
+    AI_MODEL: str = "glm-4v-plus"
+    AI_TIMEOUT: int = 60
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

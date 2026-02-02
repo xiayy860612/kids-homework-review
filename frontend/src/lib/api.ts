@@ -106,6 +106,10 @@ export const api = {
     }
   ) => apiClient.put(`/wrong-questions/${id}`, data),
 
+  // 分析错题
+  analyzeWrongQuestion: (id: number) =>
+    apiClient.post(`/wrong-questions/${id}/analyze`),
+
   // 学科相关
   getSubjects: () => apiClient.get("/subjects"),
 
@@ -119,6 +123,34 @@ export const api = {
 };
 
 // 类型定义
+export type AnalysisStatus = "pending" | "processing" | "completed" | "failed"
+
+export interface Subject {
+  id: number;
+  name: string;
+  description: string | null;
+}
+
+export interface Tag {
+  id: number;
+  name: string;
+  is_preset: boolean;
+}
+
+export interface WrongQuestion {
+  id: number;
+  title: string;
+  subject: Subject;
+  tags: Tag[];
+  image_base64: string;
+  analysis_status: AnalysisStatus;
+  analysis_result: string | null;
+  analysis_error: string | null;
+  analyzed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ApiError {
   message: string;
   code?: string;

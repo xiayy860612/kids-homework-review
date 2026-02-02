@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/select"
 import { ImageUpload } from "@/components/ImageUpload"
 import { TagSelector } from "@/components/TagSelector"
+import { MarkdownRenderer } from "@/components/MarkdownRenderer"
 import { useToast } from "@/components/ui/use-toast"
-import { api } from "@/lib/api"
+import { api, type AnalysisStatus } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface Subject {
@@ -40,6 +41,9 @@ interface WrongQuestionFormProps {
     subject_id?: number
     tag_ids?: number[]
     image_base64?: string
+    analysis_status?: AnalysisStatus
+    analysis_result?: string | null
+    analysis_error?: string | null
   }
   subjects: Subject[]
   tags: Tag[]
@@ -222,6 +226,39 @@ export function WrongQuestionForm({
           <p className="text-sm text-destructive">{errors.image}</p>
         )}
       </div>
+
+      {/* AI Analysis Result - only show in read-only mode */}
+      {readOnly && (
+        <>
+          {initialData?.analysis_result && (
+            <div className="space-y-2">
+              <Label>AI 解析结果</Label>
+              <div className="rounded-lg border bg-muted p-4">
+                <MarkdownRenderer content={initialData.analysis_result} />
+              </div>
+            </div>
+          )}
+
+          {initialData?.analysis_status === "processing" && (
+            <div className="rounded-lg border bg-muted p-4">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <p className="text-sm text-muted-foreground">
+                  AI 正在解析中，请稍候...
+                </p>
+              </div>
+            </div>
+          )}
+
+          {initialData?.analysis_status === "failed" && (
+            <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
+              <p className="text-sm text-destructive">
+                解析失败：{initialData.analysis_error || "未知错误"}
+              </p>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Submit/Action Buttons */}
       {readOnly ? (

@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from src.api.dependencies import CurrentUserDep, DatabaseDep
+from src.services.ai_analysis import AIAnalysisService
 from src.services.wrong_question import (
     SubjectService,
     TagService,
@@ -83,8 +84,22 @@ class WrongQuestionResponse(BaseModel):
     subject: WrongQuestionSubjectResponse
     tags: list[WrongQuestionTagResponse]
     image_base64: str | None = None
+    analysis_status: str = "pending"
+    analysis_result: str | None = None
+    analysis_error: str | None = None
+    analyzed_at: str | None = None
     created_at: str
     updated_at: str
+
+
+class WrongQuestionAnalysisResponse(BaseModel):
+    """Wrong question analysis response schema."""
+
+    id: int
+    analysis_status: str  # pending, processing, completed, failed
+    analysis_result: str | None = None
+    analysis_error: str | None = None
+    analyzed_at: str | None = None
 
 
 class WrongQuestionListItemResponse(BaseModel):
@@ -107,6 +122,7 @@ tags_router = APIRouter(prefix="/tags", tags=["Tags"])
 wrong_question_service = WrongQuestionService()
 subject_service = SubjectService()
 tag_service = TagService()
+ai_analysis_service = AIAnalysisService()
 
 
 # Wrong Question Routes
@@ -237,6 +253,45 @@ async def update_wrong_question(
         )
 
     return WrongQuestionResponse(**result)
+
+
+@router.post(
+    "/{wrong_question_id}/analyze",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=WrongQuestionAnalysisResponse,
+)
+async def analyze_wrong_question(
+    wrong_question_id: int,
+    current_user: CurrentUserDep,
+    db: DatabaseDep,
+) -> WrongQuestionAnalysisResponse:
+    """Trigger AI analysis for a wrong question.
+
+    Args:
+        wrong_question_id: Wrong question ID to analyze
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        WrongQuestionAnalysisResponse: Analysis status
+
+    Raises:
+        HTTPException: If wrong question not found
+    """
+    result = await wrong_question_service.analyze_wrong_question(
+        db=db,
+        wrong_question_id=wrong_question_id,
+        user_id=current_user.id,
+        ai_analysis_service=ai_analysis_service,
+    )
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Wrong question not found",
+        )
+
+    return WrongQuestionAnalysisResponse(**result)
 
 
 # Subject Routes

@@ -1,12 +1,15 @@
 """Wrong question service for business logic."""
 
+from datetime import UTC, datetime
 from typing import Any
 
+from openai import OpenAIError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.services.ai_analysis import AIAnalysisService
 from src.models.subject import Subject
 from src.models.tag import Tag
 from src.models.wrong_question import WrongQuestion
@@ -78,7 +81,7 @@ class WrongQuestionService:
             )
         )
         result = await db.execute(stmt)
-        wrong_question = result.scalar_one_or_none()
+        wrong_question = result.unique().scalar_one_or_none()
 
         if not wrong_question:
             return None
@@ -94,6 +97,14 @@ class WrongQuestionService:
                 {"id": tag.id, "name": tag.name} for tag in wrong_question.tags
             ],
             "image_base64": wrong_question.image_base64,
+            "analysis_status": wrong_question.analysis_status,
+            "analysis_result": wrong_question.analysis_result,
+            "analysis_error": wrong_question.analysis_error,
+            "analyzed_at": (
+                wrong_question.analyzed_at.isoformat()
+                if wrong_question.analyzed_at
+                else None
+            ),
             "created_at": wrong_question.created_at.isoformat(),
             "updated_at": wrong_question.updated_at.isoformat(),
         }
@@ -245,6 +256,103 @@ class WrongQuestionService:
         except IntegrityError:
             await db.rollback()
             return None
+
+    async def analyze_wrong_question(
+        self, db: AsyncSession, wrong_question_id: int, user_id: int,
+        ai_analysis_service: AIAnalysisService
+    ) -> dict[str, object] | None:
+        """Analyze a wrong question image using AI.
+
+        Args:
+            db: Database session
+            wrong_question_id: Wrong question ID to analyze
+            user_id: User ID for ownership check
+
+        Returns:
+            Updated wrong question dictionary or None if failed
+        """
+        # 1. Get wrong question and verify ownership
+        stmt = select(WrongQuestion).where(
+            WrongQuestion.id == wrong_question_id,
+            WrongQuestion.user_id == user_id,
+        )
+        result = await db.execute(stmt)
+        wrong_question = result.unique().scalar_one_or_none()
+
+        if not wrong_question:
+            return None
+
+        # 2. Update status to processing
+        wrong_question.analysis_status = "processing"
+        await db.commit()
+
+        try:
+            # 3. Call AI model for analysis
+            analysis_result = await ai_analysis_service.call_ai_model(
+                image_base64=wrong_question.image_base64,
+                title=wrong_question.title,
+            )
+
+            # 4. Save analysis result
+            wrong_question.analysis_status = "completed"
+            wrong_question.analysis_result = analysis_result
+            wrong_question.analysis_error = None
+            wrong_question.analyzed_at = datetime.now(UTC)
+
+            await db.commit()
+            await db.refresh(wrong_question)
+
+            # 5. Return updated data
+            return self._serialize_wrong_question(wrong_question)
+
+        except OpenAIError as e:
+            # API call failed
+            wrong_question.analysis_status = "failed"
+            wrong_question.analysis_error = f"AI API 调用失败: {str(e)}"
+            await db.commit()
+            return None
+
+        except Exception as e:
+            # Other errors
+            wrong_question.analysis_status = "failed"
+            wrong_question.analysis_error = f"解析失败: {str(e)}"
+            await db.commit()
+            return None
+
+    def _serialize_wrong_question(
+        self, wrong_question: WrongQuestion
+    ) -> dict[str, object]:
+        """Serialize wrong question to dictionary.
+
+        Args:
+            wrong_question: WrongQuestion model instance
+
+        Returns:
+            Dictionary representation
+        """
+        return {
+            "id": wrong_question.id,
+            "title": wrong_question.title,
+            "subject": {
+                "id": wrong_question.subject.id,
+                "name": wrong_question.subject.name,
+            },
+            "tags": [
+                {"id": tag.id, "name": tag.name} for tag in wrong_question.tags
+            ],
+            "image_base64": wrong_question.image_base64,
+            "analysis_status": wrong_question.analysis_status,
+            "analysis_result": wrong_question.analysis_result,
+            "analysis_error": wrong_question.analysis_error,
+            "analyzed_at": (
+                wrong_question.analyzed_at.isoformat()
+                if wrong_question.analyzed_at
+                else None
+            ),
+            "created_at": wrong_question.created_at.isoformat(),
+            "updated_at": wrong_question.updated_at.isoformat(),
+        }
+
 
 
 class SubjectService:
