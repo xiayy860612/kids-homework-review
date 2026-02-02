@@ -1,7 +1,18 @@
 "use client"
 
 import * as React from "react"
-import { Plus, X } from "lucide-react"
+import { Plus, X, Check } from "lucide-react"
+import type { Crop, PixelCrop } from "react-image-crop"
+import ReactCrop from "react-image-crop"
+import "react-image-crop/dist/ReactCrop.css"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -25,12 +36,104 @@ export function ImageUpload({
   className,
 }: ImageUploadProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const imgRef = React.useRef<HTMLImageElement>(null)
   const [preview, setPreview] = React.useState<string | undefined>(value)
   const [error, setError] = React.useState<string>("")
+
+  // Cropping state
+  const [cropModalOpen, setCropModalOpen] = React.useState(false)
+  const [imageToCrop, setImageToCrop] = React.useState<string>("")
+  const [crop, setCrop] = React.useState<Crop>()
+  const [completedCrop, setCompletedCrop] = React.useState<PixelCrop>()
 
   React.useEffect(() => {
     setPreview(value)
   }, [value])
+
+  const createCroppedImage = async (
+    imageSrc: string,
+    pixelCrop: PixelCrop
+  ): Promise<string> => {
+    const image = new Image()
+    image.src = imageSrc
+
+    await new Promise((resolve) => {
+      image.onload = resolve
+    })
+
+    const canvas = document.createElement("canvas")
+    const ctx = canvas.getContext("2d")
+
+    if (!ctx) {
+      throw new Error("Failed to get canvas context")
+    }
+
+    canvas.width = pixelCrop.width
+    canvas.height = pixelCrop.height
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    )
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error("Failed to create blob from canvas"))
+          return
+        }
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      }, "image/jpeg")
+    })
+  }
+
+  const handleConfirmCrop = async () => {
+    if (!completedCrop || !imageToCrop || !imgRef.current) return
+
+    try {
+      const croppedBase64 = await createCroppedImage(
+        imageToCrop,
+        completedCrop
+      )
+      setPreview(croppedBase64)
+      onChange(croppedBase64)
+      setCropModalOpen(false)
+      setImageToCrop("")
+      setCrop(undefined)
+      setCompletedCrop(undefined)
+    } catch (error) {
+      console.error("Failed to crop image:", error)
+      setError("裁剪图片失败，请重试")
+    }
+  }
+
+  const handleCancelCrop = () => {
+    setCropModalOpen(false)
+    setImageToCrop("")
+    setCrop(undefined)
+    setCompletedCrop(undefined)
+  }
+
+  const onImageLoad = () => {
+    const initialCrop: Crop = {
+      unit: "%",
+      x: 25,
+      y: 25,
+      width: 50,
+      height: 50,
+    }
+    setCrop(initialCrop)
+  }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -50,12 +153,12 @@ export function ImageUpload({
 
     setError("")
 
-    // Convert to base64
+    // Convert to base64 and open cropper
     const reader = new FileReader()
     reader.onloadend = () => {
       const base64 = reader.result as string
-      setPreview(base64)
-      onChange(base64)
+      setImageToCrop(base64)
+      setCropModalOpen(true)
     }
     reader.readAsDataURL(file)
 
@@ -126,6 +229,56 @@ export function ImageUpload({
       {error && (
         <p className="text-sm text-destructive">{error}</p>
       )}
+
+      {/* Cropping Modal */}
+      <Dialog open={cropModalOpen} onOpenChange={setCropModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>裁剪图片</DialogTitle>
+            <DialogDescription>
+              拖动剪裁框的角落和边缘来调整大小和位置，点击确认完成裁剪
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="relative w-full flex justify-center items-center bg-muted rounded-md p-4 min-h-[400px]">
+            {imageToCrop && (
+              <ReactCrop
+                crop={crop}
+                onChange={(c: Crop) => setCrop(c)}
+                onComplete={(c: PixelCrop) => setCompletedCrop(c)}
+                aspect={undefined}
+                keepSelection
+              >
+                <img
+                  ref={imgRef}
+                  src={imageToCrop}
+                  onLoad={onImageLoad}
+                  alt="Crop preview"
+                  className="max-w-full max-h-[60vh] object-contain"
+                />
+              </ReactCrop>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCancelCrop}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmCrop}
+              disabled={!completedCrop}
+            >
+              <Check className="mr-2 h-4 w-4" />
+              确认裁剪
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

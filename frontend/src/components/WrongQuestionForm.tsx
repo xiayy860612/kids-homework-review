@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { Loader2, Edit } from "lucide-react"
 import { useSWRConfig } from "swr"
 
 import { Button } from "@/components/ui/button"
@@ -44,6 +44,7 @@ interface WrongQuestionFormProps {
   subjects: Subject[]
   tags: Tag[]
   isEditing?: boolean
+  readOnly?: boolean
   className?: string
 }
 
@@ -52,6 +53,7 @@ export function WrongQuestionForm({
   subjects,
   tags,
   isEditing = false,
+  readOnly = false,
   className,
 }: WrongQuestionFormProps) {
   const router = useRouter()
@@ -141,7 +143,7 @@ export function WrongQuestionForm({
     return response.data
   }
 
-  const isDisabled = isSubmitting
+  const isDisabled = isSubmitting || readOnly
 
   return (
     <form onSubmit={handleSubmit} className={cn("space-y-6", className)}>
@@ -221,21 +223,40 @@ export function WrongQuestionForm({
         )}
       </div>
 
-      {/* Submit */}
-      <div className="flex gap-3">
-        <Button type="submit" disabled={isDisabled}>
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditing ? "更新" : "创建"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={isDisabled}
-        >
-          取消
-        </Button>
-      </div>
+      {/* Submit/Action Buttons */}
+      {readOnly ? (
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            onClick={() => router.push(`/wrong-questions/${initialData?.id}/edit`)}
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            编辑
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+          >
+            返回
+          </Button>
+        </div>
+      ) : (
+        <div className="flex gap-3">
+          <Button type="submit" disabled={isDisabled}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditing ? "更新" : "创建"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            disabled={isDisabled}
+          >
+            取消
+          </Button>
+        </div>
+      )}
     </form>
   )
 }
