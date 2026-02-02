@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { Loader2, Edit } from "lucide-react"
 import { useSWRConfig } from "swr"
 
 import { Button } from "@/components/ui/button"
@@ -17,8 +17,9 @@ import {
 } from "@/components/ui/select"
 import { ImageUpload } from "@/components/ImageUpload"
 import { TagSelector } from "@/components/TagSelector"
+import { MarkdownRenderer } from "@/components/MarkdownRenderer"
 import { useToast } from "@/components/ui/use-toast"
-import { api } from "@/lib/api"
+import { api, type AnalysisStatus } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface Subject {
@@ -40,10 +41,14 @@ interface WrongQuestionFormProps {
     subject_id?: number
     tag_ids?: number[]
     image_base64?: string
+    analysis_status?: AnalysisStatus
+    analysis_result?: string | null
+    analysis_error?: string | null
   }
   subjects: Subject[]
   tags: Tag[]
   isEditing?: boolean
+  readOnly?: boolean
   className?: string
 }
 
@@ -52,6 +57,7 @@ export function WrongQuestionForm({
   subjects,
   tags,
   isEditing = false,
+  readOnly = false,
   className,
 }: WrongQuestionFormProps) {
   const router = useRouter()
@@ -141,7 +147,7 @@ export function WrongQuestionForm({
     return response.data
   }
 
-  const isDisabled = isSubmitting
+  const isDisabled = isSubmitting || readOnly
 
   return (
     <form onSubmit={handleSubmit} className={cn("space-y-6", className)}>
@@ -221,21 +227,73 @@ export function WrongQuestionForm({
         )}
       </div>
 
-      {/* Submit */}
-      <div className="flex gap-3">
-        <Button type="submit" disabled={isDisabled}>
-          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {isEditing ? "更新" : "创建"}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={isDisabled}
-        >
-          取消
-        </Button>
-      </div>
+      {/* AI Analysis Result - only show in read-only mode */}
+      {readOnly && (
+        <>
+          {initialData?.analysis_result && (
+            <div className="space-y-2">
+              <Label>AI 解析结果</Label>
+              <div className="rounded-lg border bg-muted p-4">
+                <MarkdownRenderer content={initialData.analysis_result} />
+              </div>
+            </div>
+          )}
+
+          {initialData?.analysis_status === "processing" && (
+            <div className="rounded-lg border bg-muted p-4">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <p className="text-sm text-muted-foreground">
+                  AI 正在解析中，请稍候...
+                </p>
+              </div>
+            </div>
+          )}
+
+          {initialData?.analysis_status === "failed" && (
+            <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
+              <p className="text-sm text-destructive">
+                解析失败：{initialData.analysis_error || "未知错误"}
+              </p>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Submit/Action Buttons */}
+      {readOnly ? (
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            onClick={() => router.push(`/wrong-questions/${initialData?.id}/edit`)}
+          >
+            <Edit className="mr-2 h-4 w-4" />
+            编辑
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+          >
+            返回
+          </Button>
+        </div>
+      ) : (
+        <div className="flex gap-3">
+          <Button type="submit" disabled={isDisabled}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isEditing ? "更新" : "创建"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            disabled={isDisabled}
+          >
+            取消
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

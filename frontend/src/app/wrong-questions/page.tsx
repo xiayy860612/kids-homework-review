@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Loader2, Edit } from "lucide-react"
+import { Plus, Loader2, Edit, Eye } from "lucide-react"
 import useSWR from "swr"
 
 import { ProtectedRoute } from "@/components/ProtectedRoute"
@@ -126,15 +126,28 @@ export default function WrongQuestionsPage() {
                         </TableCell>
                         <TableCell>{formatDate(wq.created_at)}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              router.push(`/wrong-questions/${wq.id}/edit`)
-                            }
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/wrong-questions/${wq.id}`)
+                              }
+                              title="查看"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                router.push(`/wrong-questions/${wq.id}/edit`)
+                              }
+                              title="编辑"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

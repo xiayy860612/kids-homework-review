@@ -52,11 +52,26 @@ jobs:
             artifacts/backend-package.sha256 \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/tmp/
 
+      - name: Create environment file with AI secrets
+        run: |
+          cat > artifacts/.env.extra << EOF
+          AI_API_BASE=${{ vars.AI_API_BASE }}
+          AI_API_KEY=${{ secrets.AI_API_KEY }}
+          AI_MODEL=${{ vars.AI_MODEL }}
+          EOF
+
       - name: Upload deploy script to remote server
         run: |
           scp -i ~/.ssh/deploy_key \
             -o StrictHostKeyChecking=no \
             backend/be-deploy.sh \
+            ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/tmp/
+
+      - name: Upload AI secrets to remote server
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            -o StrictHostKeyChecking=no \
+            artifacts/.env.extra \
             ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:/tmp/
 
       - name: Deploy on remote server

@@ -64,3 +64,6 @@ coverage/
 # OS
 .DS_Store
 Thumbs.db
+
+# secret file
+.env.extra

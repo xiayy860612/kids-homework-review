@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { User, LogOut, Shield, KeyRound } from "lucide-react";
+import { User, LogOut, Shield, KeyRound, Book } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +22,21 @@ export function Header() {
   return (
     <header className="border-b bg-background">
       <div className="flex h-16 items-center justify-between px-6">
-        <div
-          className="flex cursor-pointer items-center gap-2 hover:opacity-80"
-          onClick={() => router.push("/")}
-        >
-          <h1 className="text-xl font-semibold">Kids Homework Review</h1>
+        <div className="flex items-center gap-4">
+          <div
+            className="flex cursor-pointer items-center gap-2 hover:opacity-80"
+            onClick={() => router.push("/")}
+          >
+            <h1 className="text-xl font-semibold">Kids Homework Review</h1>
+          </div>
+          <Button
+            variant="ghost"
+            className="gap-2"
+            onClick={() => router.push("/wrong-questions")}
+          >
+            <Book className="size-4" />
+            <span className="text-sm">错题集</span>
+          </Button>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

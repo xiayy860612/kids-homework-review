@@ -14,6 +14,7 @@ from src.api.wrong_questions import (
     tags_router,
 )
 from src.core.config import settings
+from src.core.exception_handlers import register_exception_handlers
 
 
 @asynccontextmanager
@@ -49,6 +50,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register global exception handlers
+register_exception_handlers(app)
 
 
 @app.get("/")
