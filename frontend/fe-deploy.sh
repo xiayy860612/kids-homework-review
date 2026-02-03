@@ -98,6 +98,7 @@ start_new_container() {
     # 启动服务（挂载代码目录）
     docker run -d \
         --name "$CONTAINER_NAME" \
+        --add-host=host.docker.internal:host-gateway \
         --restart unless-stopped \
         -p "${PORT}:3000" \
         -v "${DEPLOY_DIR}:/app" \

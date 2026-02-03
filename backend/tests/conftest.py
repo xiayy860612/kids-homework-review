@@ -2,7 +2,6 @@
 import asyncio
 from collections.abc import AsyncGenerator
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Generator
 
 import pytest
@@ -17,9 +16,8 @@ from src.main import app
 from src.models.user import User
 
 
-# Test database file
-TEST_DB_FILE = Path(__file__).parent.parent / "test_homework_review.db"
-TEST_DATABASE_URL = f"sqlite+aiosqlite:///{TEST_DB_FILE}"
+# Test database URL
+TEST_DATABASE_URL = "postgresql+asyncpg://postgres:s2u2m1234@localhost:5432/homework_review"
 
 
 # Create test engine
@@ -27,24 +25,6 @@ test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
 TestSessionLocal = async_sessionmaker(
     test_engine, class_=AsyncSession, expire_on_commit=False
 )
-
-
-@pytest.fixture(scope="session", autouse=True)
-def cleanup_test_db() -> Generator[None, None, None]:
-    """Cleanup test database before and after tests.
-
-    Yields:
-        None
-    """
-    # Cleanup before tests
-    if TEST_DB_FILE.exists():
-        TEST_DB_FILE.unlink()
-
-    yield
-
-    # Cleanup after tests
-    if TEST_DB_FILE.exists():
-        TEST_DB_FILE.unlink()
 
 
 @pytest.fixture(scope="session")

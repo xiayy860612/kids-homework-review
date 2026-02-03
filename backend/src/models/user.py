@@ -1,6 +1,6 @@
 """User model for preset authentication."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
@@ -35,13 +35,13 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="user")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.now(),
+        onupdate=lambda: datetime.now(),
     )
 
     def __repr__(self) -> str:
