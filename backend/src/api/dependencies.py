@@ -43,7 +43,7 @@ async def get_current_user(
             detail="Could not validate credentials",
         )
 
-    user_id: int = payload.get("sub")
+    user_id: str = payload.get("sub")
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -51,7 +51,7 @@ async def get_current_user(
         )
 
     auth_service = AuthService()
-    user = await auth_service.get_user_by_id(db, user_id)
+    user = await auth_service.get_user_by_id(db, int(user_id))
 
     if user is None:
         raise HTTPException(

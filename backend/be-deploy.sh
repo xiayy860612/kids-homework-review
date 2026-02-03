@@ -80,6 +80,7 @@ prepare_env() {
 
         # 更新 AI 相关变量
         source /tmp/.env.extra
+        sed -i.bak "s|^DATABASE_URL=.*|DATABASE_URL=${DATABASE_URL}|" .env
         sed -i.bak "s|^AI_API_BASE=.*|AI_API_BASE=${AI_API_BASE}|" .env
         sed -i.bak "s|^AI_API_KEY=.*|AI_API_KEY=${AI_API_KEY}|" .env
         sed -i.bak "s|^AI_MODEL=.*|AI_MODEL=${AI_MODEL}|" .env
@@ -115,6 +116,7 @@ start_new_container() {
     # 启动服务（挂载代码目录）
     docker run -d \
         --name "$CONTAINER_NAME" \
+        --add-host=host.docker.internal:host-gateway \
         --restart unless-stopped \
         -p "${PORT}:8080" \
         -v "${DEPLOY_DIR}:/app" \

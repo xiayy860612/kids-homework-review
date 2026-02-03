@@ -1,6 +1,6 @@
 """WrongQuestion model for storing student wrong questions."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -39,15 +39,15 @@ class WrongQuestion(Base):
     )
     analysis_result: Mapped[str | None] = mapped_column(Text, nullable=True)
     analysis_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    analyzed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    analyzed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=lambda: datetime.now(UTC)
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=lambda: datetime.now(),
+        onupdate=lambda: datetime.now(),
     )
 
     # Relationships

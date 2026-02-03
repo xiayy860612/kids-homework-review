@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
+import { toast } from "@/components/ui/use-toast";
 
 const TOKEN_KEY = "access_token";
 
@@ -24,14 +25,34 @@ apiClient.interceptors.request.use(
   }
 );
 
-// 响应拦截器：处理 401 错误
+// 响应拦截器：处理错误并显示提示
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    // 处理 401 未授权错误
     if (error.response?.status === 401) {
       removeAuthToken();
       window.location.href = "/login";
+      return Promise.reject(error);
     }
+
+    // 处理其他错误并显示提示
+    const apiError = getApiError(error);
+    const status = error.response?.status;
+
+    let title = "请求失败";
+    if (status === 400) title = "请求参数错误";
+    else if (status === 403) title = "权限不足";
+    else if (status === 404) title = "资源不存在";
+    else if (status === 500) title = "服务器错误";
+    else if (status === 503) title = "服务暂时不可用";
+
+    toast({
+      title,
+      description: apiError.message,
+      variant: "destructive",
+    });
+
     return Promise.reject(error);
   }
 );

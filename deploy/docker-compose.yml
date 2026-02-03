@@ -17,3 +17,18 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  pg:
+    image: postgres:18
+    container_name: pg
+    restart: unless-stopped
+    environment:
+      # default user: postgres
+      POSTGRES_PASSWORD: s2u2m1234
+    network_mode: bridge
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pg/volumes:/var/lib/postgresql/18/docker
+

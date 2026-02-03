@@ -5,8 +5,9 @@ Revises: bb5d29c0d5f3
 Create Date: 2026-01-21 20:31:17.558841
 
 """
-from typing import Sequence, Union
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
@@ -22,8 +23,9 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     # Pre-hashed password for "password123" using bcrypt (cost 12)
-    default_password = "$2b$12$xh.HRKOsYz8BvgrZFcgJCuTZF9khFIZo5CAfmKNS6h1ossgoCQdQq"
-    now = datetime.now(timezone.utc)
+    default_password = "$2b$12$jLXj9Ic2U2P0R6/cssEYEODXHOQBWTiav669YnAMXjSEJRuQhB8ga"
+    # Use naive datetime for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     op.bulk_insert(
         sa.table(

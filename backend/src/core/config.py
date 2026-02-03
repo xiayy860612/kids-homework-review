@@ -1,5 +1,6 @@
 """Application configuration using Pydantic Settings."""
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,7 +16,7 @@ class Settings(BaseSettings):
         COOKIE_SECURE: Whether cookies should be set with Secure flag
     """
 
-    DATABASE_URL: str = "sqlite+aiosqlite:///./homework_review.db"
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:s2u2m1234@localhost:5432/homework_review"
     SECRET_KEY: str = "change-this-secret-key-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
@@ -34,6 +35,16 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @field_validator("DATABASE_URL")
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        """Validate DATABASE_URL format."""
+        if not v.startswith(("postgresql+asyncpg://", "sqlite+aiosqlite://")):
+            raise ValueError(
+                "DATABASE_URL must use postgresql+asyncpg:// or sqlite+aiosqlite:// scheme"
+            )
+        return v
 
 
 settings = Settings()
