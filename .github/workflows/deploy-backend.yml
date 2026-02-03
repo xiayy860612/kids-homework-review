@@ -54,8 +54,8 @@ jobs:
 
       - name: Create environment file with AI secrets
         run: |
-          cat > artifacts/.env.extra << EOF
-          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          cat > artifacts/.env.extra << 'EOF'
+          DATABASE_URL='${{ secrets.DATABASE_URL }}'
           AI_API_BASE=${{ vars.AI_API_BASE }}
           AI_API_KEY=${{ secrets.AI_API_KEY }}
           AI_MODEL=${{ vars.AI_MODEL }}
