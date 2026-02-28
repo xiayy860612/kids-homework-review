@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Plus, X, Check } from "lucide-react"
+import { Plus, X, Check, Camera, ImageIcon } from "lucide-react"
 import type { Crop, PixelCrop } from "react-image-crop"
 import ReactCrop from "react-image-crop"
 import "react-image-crop/dist/ReactCrop.css"
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 
 import { cn } from "@/lib/utils"
+import { isMobileDevice } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ImageLightbox } from "@/components/ImageLightbox"
 
@@ -37,9 +38,16 @@ export function ImageUpload({
   className,
 }: ImageUploadProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const cameraInputRef = React.useRef<HTMLInputElement>(null)
   const imgRef = React.useRef<HTMLImageElement>(null)
   const [preview, setPreview] = React.useState<string | undefined>(value)
   const [error, setError] = React.useState<string>("")
+  const [isMobile, setIsMobile] = React.useState(false)
+
+  // Detect mobile device on mount
+  React.useEffect(() => {
+    setIsMobile(isMobileDevice())
+  }, [])
 
   // Cropping state
   const [cropModalOpen, setCropModalOpen] = React.useState(false)
@@ -62,6 +70,14 @@ export function ImageUpload({
       image.onload = resolve
     })
 
+    if (!imgRef.current) {
+      throw new Error("Image ref not available")
+    }
+
+    // Calculate scale ratio between displayed image and natural image
+    const scaleX = image.naturalWidth / imgRef.current.width
+    const scaleY = image.naturalHeight / imgRef.current.height
+
     const canvas = document.createElement("canvas")
     const ctx = canvas.getContext("2d")
 
@@ -69,32 +85,37 @@ export function ImageUpload({
       throw new Error("Failed to get canvas context")
     }
 
-    canvas.width = pixelCrop.width
-    canvas.height = pixelCrop.height
+    // Scale crop coordinates to match natural image size
+    canvas.width = pixelCrop.width * scaleX
+    canvas.height = pixelCrop.height * scaleY
 
     ctx.drawImage(
       image,
-      pixelCrop.x,
-      pixelCrop.y,
-      pixelCrop.width,
-      pixelCrop.height,
+      pixelCrop.x * scaleX,
+      pixelCrop.y * scaleY,
+      pixelCrop.width * scaleX,
+      pixelCrop.height * scaleY,
       0,
       0,
-      pixelCrop.width,
-      pixelCrop.height
+      pixelCrop.width * scaleX,
+      pixelCrop.height * scaleY
     )
 
     return new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error("Failed to create blob from canvas"))
-          return
-        }
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(blob)
-      }, "image/jpeg")
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error("Failed to create blob from canvas"))
+            return
+          }
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(blob)
+        },
+        "image/jpeg",
+        0.95
+      )
     })
   }
 
@@ -163,13 +184,28 @@ export function ImageUpload({
     }
     reader.readAsDataURL(file)
 
-    // Reset input
+    // Reset inputs
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
+    }
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ""
     }
   }
 
   const handleClick = () => {
+    if (!disabled) {
+      fileInputRef.current?.click()
+    }
+  }
+
+  const handleCameraClick = () => {
+    if (!disabled) {
+      cameraInputRef.current?.click()
+    }
+  }
+
+  const handleGalleryClick = () => {
     if (!disabled) {
       fileInputRef.current?.click()
     }
@@ -182,10 +218,21 @@ export function ImageUpload({
 
   return (
     <div className={cn("space-y-2", className)}>
+      {/* Gallery file input */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png"
+        onChange={handleFileChange}
+        className="hidden"
+        disabled={disabled}
+      />
+      {/* Camera file input with capture attribute */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        capture="environment"
         onChange={handleFileChange}
         className="hidden"
         disabled={disabled}
@@ -220,7 +267,32 @@ export function ImageUpload({
             </Button>
           )}
         </div>
+      ) : isMobile ? (
+        // Mobile: Show two separate buttons for camera and gallery
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCameraClick}
+            disabled={disabled}
+            className="flex-1 h-auto py-4 flex flex-col items-center gap-2"
+          >
+            <Camera className="h-6 w-6" />
+            <span>拍照</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleGalleryClick}
+            disabled={disabled}
+            className="flex-1 h-auto py-4 flex flex-col items-center gap-2"
+          >
+            <ImageIcon className="h-6 w-6" />
+            <span>从相册选择</span>
+          </Button>
+        </div>
       ) : (
+        // Desktop: Show original dashed border area
         <div
           onClick={handleClick}
           className={cn(
@@ -243,15 +315,16 @@ export function ImageUpload({
 
       {/* Cropping Modal */}
       <Dialog open={cropModalOpen} onOpenChange={setCropModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-2">
             <DialogTitle>裁剪图片</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="sr-only">
               拖动剪裁框的角落和边缘来调整大小和位置，点击确认完成裁剪
             </DialogDescription>
           </DialogHeader>
 
-          <div className="relative w-full flex justify-center items-center bg-muted rounded-md p-4 min-h-[400px]">
+          {/* Image container - takes available space */}
+          <div className="flex-1 relative w-full flex justify-center items-center bg-muted p-2 sm:p-4 overflow-hidden min-h-0">
             {imageToCrop && (
               <ReactCrop
                 crop={crop}
@@ -265,13 +338,13 @@ export function ImageUpload({
                   src={imageToCrop}
                   onLoad={onImageLoad}
                   alt="Crop preview"
-                  className="max-w-full max-h-[60vh] object-contain"
+                  className="max-w-full max-h-full object-contain"
                 />
               </ReactCrop>
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t">
             <Button
               type="button"
               variant="outline"
